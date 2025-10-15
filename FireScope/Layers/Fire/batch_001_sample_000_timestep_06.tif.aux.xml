@@ -1,0 +1,12 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Description>野火预测概率</Description>
+    <Metadata>
+      <MDI key="STATISTICS_MINIMUM">0</MDI>
+      <MDI key="STATISTICS_MAXIMUM">0.14856418967247</MDI>
+      <MDI key="STATISTICS_MEAN">0.0015803998237629</MDI>
+      <MDI key="STATISTICS_STDDEV">0.014367168049896</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">100</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

@@ -1,0 +1,1 @@
+gdal2tiles.py -z 5-8 -w leaflet converted_image.tif output_folder/
