@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- GeoTIFF → canvas (for population_density.tif) -->
+  <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@4.1.2/dist/georaster-layer-for-leaflet.min.js"></script>
+
+  <style>
+    body { margin:0; padding:0; }
+    #map { position:absolute; top:0; bottom:0; width:100%; }
+    .ctl {
+      padding: 2px 10px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif;
+      font-size: 11pt;
+    }
+    .src { font-size: 10pt; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+  // Base layers
+  const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', minZoom: 5, maxZoom: 15
+  });
+  const cartodb = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors, &copy; CartoDB', minZoom: 5, maxZoom: 15
+  });
+  const white = L.tileLayer("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==", {
+    minZoom: 5, maxZoom: 15
+  });
+
+  const map = L.map('map', {
+    center: [34.5, -118.5],
+    zoom: 8,
+    minZoom: 5,
+    maxZoom: 15,
+    layers: [osm]
+  });
+
+  const basemaps = {
+    "OpenStreetMap": osm,
+    "CartoDB Positron": cartodb,
+    "Without background": white
+  };
+
+  /** 将配准后的 GeoTIFF 放在 Layers/Population/population_density.tif */
+  const POPULATION_TIF_URL = "Layers/Population/population_density.tif";
+  const populationOverlayGroup = L.layerGroup();
+  populationOverlayGroup.addTo(map);
+
+  const overlays = {
+    "Population density · 人口密度": populationOverlayGroup
+  };
+  L.control.layers(basemaps, overlays, { collapsed: false }).addTo(map);
+
+  // Attribution（先于人口图层加载，便于在 catch 中提示错误）
+  const note = L.control({ position: 'bottomleft' });
+  note.onAdd = function (map) {
+    this._div = L.DomUtil.create('div', 'ctl src');
+    return this._div;
+  };
+  note.addTo(map);
+
+  fetch(POPULATION_TIF_URL)
+    .then(function (res) {
+      if (!res.ok) throw new Error("Failed to load " + POPULATION_TIF_URL + " (" + res.status + ")");
+      return res.arrayBuffer();
+    })
+    .then(function (buffer) { return parseGeoraster(buffer); })
+    .then(function (georaster) {
+      const popLayer = new GeoRasterLayer({
+        georaster: georaster,
+        opacity: 0.55,
+        resolution: 256
+      });
+      populationOverlayGroup.addLayer(popLayer);
+      map.fitBounds(popLayer.getBounds(), { padding: [24, 24] });
+    })
+    .catch(function (err) {
+      console.error(err);
+      note.getContainer().innerHTML =
+        '<span style="color:#a00;">Population layer: ' +
+        err.message +
+        '</span><br><span style="font-size:9pt;">Place georeferenced GeoTIFF at ' + POPULATION_TIF_URL + "</span>";
+    });
+</script>
+
+</body>
+</html>
